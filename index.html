@@ -38,7 +38,7 @@
   .msg.ciel { align-self: flex-start; }
   .msg-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
   .msg.user .msg-avatar { background: #2d2d3a; }
-  .bubble { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.6; }
+  .bubble { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.6; white-space: pre-wrap; }
   .msg.ciel .bubble { background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; }
   .msg.user .bubble { background: var(--accent); border-top-right-radius: 4px; color: #fff; }
   .msg-time { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
@@ -108,9 +108,10 @@ async function sendMessage() {
   history.push({role:'user',content:text});
   busy=true; document.getElementById('sendBtn').disabled=true; showTyping();
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:SYSTEM,messages:history})
+    const res = await fetch('/api/chat',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({system:SYSTEM, messages:history})
     });
     const data = await res.json();
     const reply = data.content?.[0]?.text || '…わかりません。';
