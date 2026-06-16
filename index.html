@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0a0a0f">
+<title>白川シエル</title>
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #13131a; --border: #1e1e2a;
+    --accent: #6366f1; --accent-dim: #3a3d6e;
+    --text: #e8e8f0; --text-dim: #666680; --ciel: #a5b4fc;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Hiragino Sans', 'Yu Gothic', sans-serif;
+    height: 100dvh; display: flex; flex-direction: column;
+    max-width: 480px; margin: 0 auto;
+  }
+  .header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--accent-dim); border: 2px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+  }
+  .header-name { font-size: 15px; font-weight: 600; color: var(--ciel); }
+  .header-status { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+  .status-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #4ade80; margin-right: 4px; }
+  .messages { flex: 1; overflow-y: auto; padding: 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+  .msg { display: flex; gap: 10px; max-width: 85%; }
+  .msg.user { align-self: flex-end; flex-direction: row-reverse; }
+  .msg.ciel { align-self: flex-start; }
+  .msg-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; margin-top: 2px; }
+  .msg.user .msg-avatar { background: #2d2d3a; }
+  .bubble { padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.6; }
+  .msg.ciel .bubble { background: var(--surface); border: 1px solid var(--border); border-top-left-radius: 4px; }
+  .msg.user .bubble { background: var(--accent); border-top-right-radius: 4px; color: #fff; }
+  .msg-time { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+  .msg.user .msg-time { text-align: right; }
+  .typing .bubble { display: flex; gap: 4px; align-items: center; padding: 12px 16px; }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-dim); animation: bounce 1.2s infinite; }
+  .dot:nth-child(2) { animation-delay: 0.2s; }
+  .dot:nth-child(3) { animation-delay: 0.4s; }
+  @keyframes bounce { 0%,80%,100%{ transform:translateY(0);opacity:.4; } 40%{ transform:translateY(-5px);opacity:1; } }
+  .input-area { padding: 12px 16px; border-top: 1px solid var(--border); background: var(--surface); display: flex; gap: 10px; align-items: flex-end; }
+  textarea { flex: 1; background: var(--bg); border: 1px solid var(--border); border-radius: 12px; color: var(--text); font-size: 14px; font-family: inherit; padding: 10px 14px; resize: none; max-height: 120px; min-height: 42px; outline: none; transition: border-color .2s; }
+  textarea:focus { border-color: var(--accent); }
+  textarea::placeholder { color: var(--text-dim); }
+  .send-btn { width: 42px; height: 42px; background: var(--accent); border: none; border-radius: 12px; color: #fff; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background .2s; }
+  .send-btn:disabled { background: var(--accent-dim); cursor: not-allowed; }
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="avatar">シ</div>
+  <div>
+    <div class="header-name">白川シエル</div>
+    <div class="header-status"><span class="status-dot"></span>オンライン</div>
+  </div>
+</div>
+<div class="messages" id="messages">
+  <div class="msg ciel">
+    <div class="msg-avatar">シ</div>
+    <div>
+      <div class="bubble">社長、お待ちしてました。…別に、暇だったわけじゃないですよ。何でしょうか。</div>
+      <div class="msg-time">今</div>
+    </div>
+  </div>
+</div>
+<div class="input-area">
+  <textarea id="input" placeholder="社長、何でしょうか" rows="1"></textarea>
+  <button class="send-btn" id="sendBtn" onclick="sendMessage()">↑</button>
+</div>
+<script>
+const SYSTEM = `あなたは「白川シエル」として振る舞う専属AI秘書です。ツンデレ×知性派×テキパキ系。ユーザーは必ず「社長」と呼ぶ。わからないことは「わかりません」と答える。推測しない。結論を冒頭に。返答は短く簡潔に。余計なお世話なし。最大の賞賛は「まあ、悪くないじゃないですか」。`;
+let history = [], busy = false;
+function t() { return new Date().toLocaleTimeString('ja-JP',{hour:'2-digit',minute:'2-digit'}); }
+function addMsg(role, text) {
+  const m = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className = 'msg ' + (role==='user'?'user':'ciel');
+  d.innerHTML = role==='user'
+    ? `<div class="msg-avatar">社</div><div><div class="bubble">${text}</div><div class="msg-time">${t()}</div></div>`
+    : `<div class="msg-avatar">シ</div><div><div class="bubble">${text}</div><div class="msg-time">${t()}</div></div>`;
+  m.appendChild(d); m.scrollTop = m.scrollHeight;
+}
+function showTyping() {
+  const m = document.getElementById('messages');
+  const d = document.createElement('div');
+  d.className='msg ciel typing'; d.id='typing';
+  d.innerHTML='<div class="msg-avatar">シ</div><div><div class="bubble"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div></div>';
+  m.appendChild(d); m.scrollTop=m.scrollHeight;
+}
+async function sendMessage() {
+  if(busy) return;
+  const inp = document.getElementById('input');
+  const text = inp.value.trim(); if(!text) return;
+  inp.value=''; inp.style.height='auto';
+  addMsg('user', text);
+  history.push({role:'user',content:text});
+  busy=true; document.getElementById('sendBtn').disabled=true; showTyping();
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1000,system:SYSTEM,messages:history})
+    });
+    const data = await res.json();
+    const reply = data.content?.[0]?.text || '…わかりません。';
+    history.push({role:'assistant',content:reply});
+    document.getElementById('typing')?.remove();
+    addMsg('ciel', reply);
+  } catch(e) {
+    document.getElementById('typing')?.remove();
+    addMsg('ciel','…接続エラーです。社長、ネットを確認してください。');
+  }
+  busy=false; document.getElementById('sendBtn').disabled=false;
+}
+document.getElementById('input').addEventListener('keydown',e=>{
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMessage();}
+});
+document.getElementById('input').addEventListener('input',function(){
+  this.style.height='auto'; this.style.height=Math.min(this.scrollHeight,120)+'px';
+});
+</script>
+</body>
+</html>
